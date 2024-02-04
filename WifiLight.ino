@@ -5,10 +5,13 @@ wifi配置，需要连接开发板的ap，进入192.168.4.1网页进行设置，
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#include <EEPROM.h>
 
 #ifndef APSSID
 #define APSSID "WifiLight"
 #define APPSK "88888888"
+#define SSID_POS 10
+#define PASSWORD_POS 100
 #endif
 
 const char *ssid = APSSID;
@@ -24,6 +27,12 @@ ESP8266WebServer server(80);
 void setup() {
   delay(1000);
   Serial.begin(115200);
+  EEPROM.begin(512);
+  staSsid = readString(SSID_POS);
+  staPassword = readString(PASSWORD_POS);
+  if (staSsid.length() > 0 && staPassword.length() > 0) {
+    tryConnect = true;
+  }
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
@@ -36,7 +45,7 @@ void loop() {
   delay(500);
 }
 
-void workLoop(){
+void workLoop() {
   digitalWrite(LED_BUILTIN, LOW);
   //todo
 }
@@ -53,7 +62,7 @@ void configLoop() {
   if (tryConnect) {
     tryConnect = false;
     WiFi.begin(staSsid, staPassword);
-    Serial.println("try connect:" + staSsid + staPassword);
+    Serial.println("try connect:" + staSsid + "," + staPassword);
     int counter = 0;
     while (1) {
       counter++;
@@ -65,6 +74,8 @@ void configLoop() {
       Serial.println(counter);
       if (WiFi.status() == WL_CONNECTED) {
         Serial.println("网络连接成功");
+        saveString(SSID_POS, WiFi.SSID());
+        saveString(PASSWORD_POS, WiFi.psk());
         closeWeb();
         closeAP();
         break;
@@ -88,7 +99,7 @@ void closeAP() {
 
 void startWeb() {
   server.on("/", handleRoot);
-  server.on("/HandleConnectWifi", handleConnnect);
+  server.on("/HandleConnectWifi", handleConnect);
   server.begin();
   Serial.println("HTTP server started");
   webOn = true;
@@ -144,7 +155,7 @@ String getWifiList() {
   return "<select id=\"wifiName\"" + list + "</select>";
 }
 
-void handleConnnect() {
+void handleConnect() {
   Serial.println("onConnect");
   String wifiName = server.arg("ssid");
   String wifiPassword = server.arg("password");
@@ -153,4 +164,25 @@ void handleConnnect() {
   staSsid = wifiName;
   staPassword = wifiPassword;
   tryConnect = true;
+}
+
+void saveString(int pos, String str) {
+  int len = str.length();
+  EEPROM.write(pos, len);
+  for (int i = 0; i < len; i++) {
+    EEPROM.write(pos + i + 1, str[i]);
+  }
+  EEPROM.commit();
+}
+
+String readString(int pos) {
+  String str = "";
+  int len = EEPROM.read(pos);
+  if (len > 30) {
+    return str;
+  }
+  for (int i = 0; i < len; i++) {
+    str += char(EEPROM.read(pos + i + 1));
+  }
+  return str;
 }
