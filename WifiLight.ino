@@ -6,47 +6,56 @@ wifi配置，需要连接开发板的ap，进入192.168.4.1网页进行设置，
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <EEPROM.h>
+#include "RomData.h"
 
 #ifndef APSSID
 #define APSSID "WifiLight"
 #define APPSK "88888888"
 #define SSID_POS 10
 #define PASSWORD_POS 100
+#define NAME_POS 150
 #endif
 
 const char *ssid = APSSID;
 const char *password = APPSK;
-String staSsid;
-String staPassword;
-bool tryConnect = false;
 bool apOn = false;
 bool webOn = false;
+String name;
 
 ESP8266WebServer server(80);
 
 void setup() {
-  delay(1000);
   Serial.begin(115200);
+  delay(1000);
+  Serial.println("");
+  Serial.println("-----------------------------------------");
+  Serial.println("程序开始运行啦");
+  Serial.println("-----------------------------------------");
   EEPROM.begin(512);
-  staSsid = readString(SSID_POS);
-  staPassword = readString(PASSWORD_POS);
-  if (staSsid.length() > 0 && staPassword.length() > 0) {
-    tryConnect = true;
+  String savedSsid = RomReadString(SSID_POS);
+  String savedPassword = RomReadString(PASSWORD_POS);
+  name = RomReadString(NAME_POS);
+  if (savedSsid.length() > 0 && savedPassword.length() > 0) {
+    wifiConnect(savedSsid, savedPassword);
+  }
+  if (name.length() > 0) {
+    Serial.println("读取到设备名称:" + name);
   }
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(15, INPUT);
 }
 
 void loop() {
+  if (digitalRead(15) == HIGH) {
+    ResetData();
+    return;
+  }
   if (WiFi.status() != WL_CONNECTED) {
     configLoop();
   } else {
     workLoop();
   }
   delay(500);
-  if (digitalRead(15) == HIGH){
-    resetData();
-  }
 }
 
 void workLoop() {
@@ -63,33 +72,10 @@ void configLoop() {
     startWeb();
   }
   server.handleClient();
-  if (tryConnect) {
-    tryConnect = false;
-    WiFi.begin(staSsid, staPassword);
-    Serial.println("try connect:" + staSsid + "," + staPassword);
-    int counter = 0;
-    while (1) {
-      counter++;
-      if (counter > 20) {
-        Serial.println("连接超时");
-        break;
-      }
-      delay(1000);
-      Serial.println(counter);
-      if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("网络连接成功");
-        saveString(SSID_POS, WiFi.SSID());
-        saveString(PASSWORD_POS, WiFi.psk());
-        closeWeb();
-        closeAP();
-        break;
-      }
-    }
-  }
 }
 
 void startAP() {
-  Serial.println("start ap");
+  Serial.println("wifi接入点开启");
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(ssid, password);
   IPAddress myIP = WiFi.softAPIP();
@@ -97,7 +83,7 @@ void startAP() {
 }
 
 void closeAP() {
-  Serial.println("close ap");
+  Serial.println("wifi接入点关闭");
   WiFi.mode(WIFI_STA);
 }
 
@@ -105,12 +91,12 @@ void startWeb() {
   server.on("/", handleRoot);
   server.on("/HandleConnectWifi", handleConnect);
   server.begin();
-  Serial.println("HTTP server started");
+  Serial.println("http服务开启");
   webOn = true;
 }
 
 void closeWeb() {
-  Serial.println("close web");
+  Serial.println("http服务关闭");
   server.close();
 }
 
@@ -130,14 +116,17 @@ void handleRoot() {
   s += "        var nameIdx = selectObj.selectedIndex;";
   s += "        var wifiName = selectObj[nameIdx].value;";
   s += "        var password = wifiPassword.value;";
+  s += "        var nameValue = nameinput.value;";
   s += "        var xmlhttp=new XMLHttpRequest();";
-  s += "        xmlhttp.open(\"POST\",\"/HandleConnectWifi?ssid=\"+wifiName+\"&password=\"+password,true);";
+  s += "        xmlhttp.open(\"POST\",\"/HandleConnectWifi?ssid=\"+wifiName+\"&password=\"+password+\"&name=\"+nameValue,true);";
   s += "        xmlhttp.send();";
   s += "        xmlhttp.onload = function(e){alert(this.responseText);}";
   s += "      }";
   s += "    </script>";
   s += "    <form name=\"wifiConfig\">";
   s += "      <h1>wifi灯网络设置</h1>";
+  s += "      设备名称:<input id=\"nameinput\" placeholder=\"" + name + "\">";
+  s += "      <br>";
   s += "      wifi名称:" + getWifiList();
   s += "      <br>";
   s += "      wifi密码:<input id=\"wifiPassword\">";
@@ -160,42 +149,27 @@ String getWifiList() {
 }
 
 void handleConnect() {
-  Serial.println("onConnect");
   String wifiName = server.arg("ssid");
   String wifiPassword = server.arg("password");
-  Serial.println("received:" + wifiName + "," + wifiPassword);
+  name = server.arg("name");
+  Serial.println("接收到wifi设置信息:" + wifiName + "," + wifiPassword);
+  Serial.println("设备名称设置:" + name);
   server.send(200, "text/html", "连接中..");
-  staSsid = wifiName;
-  staPassword = wifiPassword;
-  tryConnect = true;
+  wifiConnect(wifiName, wifiPassword);
 }
 
-void saveString(int pos, String str) {
-  int len = str.length();
-  EEPROM.write(pos, len);
-  for (int i = 0; i < len; i++) {
-    EEPROM.write(pos + i + 1, str[i]);
+void wifiConnect(String ssid, String password) {
+  WiFi.begin(ssid, password);
+  Serial.println("尝试连接wifi:" + ssid + "," + password);
+  WiFi.waitForConnectResult(20000);
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("wifi连接成功");
+    RomSaveString(SSID_POS, WiFi.SSID());
+    RomSaveString(PASSWORD_POS, WiFi.psk());
+    RomSaveString(NAME_POS, name);
+    closeWeb();
+    closeAP();
+  } else {
+    Serial.println("wifi连接超时");
   }
-  EEPROM.commit();
-}
-
-String readString(int pos) {
-  String str = "";
-  int len = EEPROM.read(pos);
-  if (len > 30) {
-    return str;
-  }
-  for (int i = 0; i < len; i++) {
-    str += char(EEPROM.read(pos + i + 1));
-  }
-  return str;
-}
-
-void resetData() {
-  for (int i = 0; i < 512; i++) {
-    EEPROM.write(i, 0);
-  }
-  EEPROM.commit();
-  EEPROM.end();
-  ESP.restart();
 }
