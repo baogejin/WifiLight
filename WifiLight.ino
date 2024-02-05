@@ -34,6 +34,7 @@ void setup() {
     tryConnect = true;
   }
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(15, INPUT);
 }
 
 void loop() {
@@ -43,6 +44,9 @@ void loop() {
     workLoop();
   }
   delay(500);
+  if (digitalRead(15) == HIGH){
+    resetData();
+  }
 }
 
 void workLoop() {
@@ -185,4 +189,13 @@ String readString(int pos) {
     str += char(EEPROM.read(pos + i + 1));
   }
   return str;
+}
+
+void resetData() {
+  for (int i = 0; i < 512; i++) {
+    EEPROM.write(i, 0);
+  }
+  EEPROM.commit();
+  EEPROM.end();
+  ESP.restart();
 }
