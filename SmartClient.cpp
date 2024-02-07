@@ -13,8 +13,11 @@ void SmartClient::Tick() {
     }
     if (readLen > 0) {
       _c.read(_buf + _size, readLen);
+      _size += readLen;
       if (_size > 4) {
         int needLen = *((int*)_buf);
+        Serial.println(needLen);
+        Serial.println(_size);
         //当缓冲区有完整长度的包的时候，进行消息处理
         if (_size >= needLen) {
           processMsg(_buf, needLen);
@@ -40,11 +43,22 @@ void SmartClient::Tick() {
 }
 
 void SmartClient::processMsg(char* data, int len) {
-  int msgId = *((int*)(data + 4));
-  int seq = *((int*)(data + 8));
+  int seq = *((int*)(data + 4));
+  int msgId = *((int*)(data + 8));
   switch (msgId) {
+    case MsgId_RegisterAck:
+      {
+        RegisterAck ack(data + 12, len);
+        if (ack.Ret == 0) {
+          Serial.println("设备注册成功");
+        } else {
+          Serial.printf("设备注册失败,错误id:", ack.Ret);
+        }
+      }
+      break;
     default:
       Serial.printf("消息id:%d没有找到,丢弃消息\n", msgId);
+      break;
   }
 }
 

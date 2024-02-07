@@ -2,6 +2,7 @@
 #define PROTOCOL_H
 
 #include "ByteBuffer.h"
+#include "MsgId.h"
 
 class BaseReq {
 public:
@@ -27,20 +28,19 @@ public:
   }
 
   int GetMsgId() {
-    return _msgId;
+    return MsgId_RegisterReq;
   }
 private:
-  int _msgId = 1;
 };
 
 class RegisterAck {
 public:
   RegisterAck(char* buf, size_t size)
     : _b(buf, size) {
-    Result = _b.ReadInt();
+    Ret = _b.ReadInt();
   }
 
-  int Result;
+  int Ret;
 private:
   ByteBuffer _b;
 };
