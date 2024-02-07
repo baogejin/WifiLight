@@ -1,3 +1,6 @@
+#ifndef ROM_DATA_H
+#define ROM_DATA_H
+
 #include <EEPROM.h>
 void RomSaveString(int pos, String str) {
   int len = str.length();
@@ -28,3 +31,5 @@ void ResetData() {
   EEPROM.end();
   ESP.restart();
 }
+
+#endif

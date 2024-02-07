@@ -1,3 +1,6 @@
+#ifndef BYTE_BUFFER_H
+#define BYTE_BUFFER_H
+
 #define MAX_BUFFER_SIZE 128
 class ByteBuffer {
 public:
@@ -21,7 +24,7 @@ public:
   }
 
   int GetSize() {
-    return _pos;
+    return _size;
   }
 
   int ReadInt() {
@@ -29,18 +32,18 @@ public:
       Serial.println("ReadInt buf size err");
       return 0;
     }
-    int ret = *((int *)(&(_buf[_pos])));
+    int ret = *((int *)(_buf+_pos));
     _pos += 4;
     return ret;
   }
 
   void WriteInt(int v) {
-    if (_pos + 4 > MAX_BUFFER_SIZE) {
+    if (_size + 4 > MAX_BUFFER_SIZE) {
       Serial.println("WriteInt buf size err");
       return;
     }
-    memcpy(&_buf[_pos], &v, 4);
-    _pos += 4;
+    memcpy(&_buf[_size], &v, 4);
+    _size += 4;
   }
 
   String ReadString() {
@@ -59,12 +62,24 @@ public:
 
   void WriteString(String s) {
     int len = s.length();
-    if (_pos + 4 + len > MAX_BUFFER_SIZE) {
+    if (_size + 4 + len > MAX_BUFFER_SIZE) {
       return;
     }
     WriteInt(len);
-    memcpy(&_buf[_pos], s.c_str(), len);
-    _pos += len;
+    Write(s.c_str(), len);
+  }
+
+  void Write(const char* buf,int size) {
+    if(_size + size > MAX_BUFFER_SIZE) {
+      return;
+    }
+    memcpy(_buf+_size, buf, size);
+    _size += size;
+  }
+
+  void Clear(){
+    _pos = 0;
+    _size = 0;
   }
 
 private:
@@ -72,3 +87,5 @@ private:
   size_t _pos;
   char _buf[MAX_BUFFER_SIZE];
 };
+
+#endif

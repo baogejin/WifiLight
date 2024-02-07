@@ -1,3 +1,6 @@
+#ifndef PROTOCOL_H
+#define PROTOCOL_H
+
 #include "ByteBuffer.h"
 
 class BaseReq {
@@ -9,11 +12,13 @@ public:
   int GetSize() {
     return _b.GetSize();
   }
+
+  virtual int GetMsgId() = 0;
 protected:
   ByteBuffer _b;
-}
+};
 
-class RegisterReq : BaseReq {
+class RegisterReq : public BaseReq {
 public:
   RegisterReq(int itemType, String name) {
     int len = 4 + 4 + name.length();  //itemtype长度4+name长度（4+字符串长度）
@@ -39,3 +44,5 @@ public:
 private:
   ByteBuffer _b;
 };
+
+#endif

@@ -2,11 +2,10 @@
 wifi配置，需要连接开发板的ap，进入192.168.4.1网页进行设置，联网成功后，开发板的ap就将关闭
 */
 #include <ESP8266WiFi.h>
-#include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-#include <EEPROM.h>
 #include "RomData.h"
+#include "SmartClient.h"
 
 #ifndef APSSID
 #define APSSID "WifiLight"
@@ -23,6 +22,7 @@ bool webOn = false;
 String name;
 
 ESP8266WebServer server(80);
+SmartClient client;
 
 void setup() {
   Serial.begin(115200);
@@ -60,7 +60,7 @@ void loop() {
 
 void workLoop() {
   digitalWrite(LED_BUILTIN, LOW);
-  //todo
+  client.Tick();
 }
 
 void configLoop() {
@@ -169,6 +169,7 @@ void wifiConnect(String ssid, String password) {
     RomSaveString(NAME_POS, name);
     closeWeb();
     closeAP();
+    client.SetName(name);
   } else {
     Serial.println("wifi连接超时");
   }
