@@ -2,6 +2,7 @@
 #define BYTE_BUFFER_H
 
 #define MAX_BUFFER_SIZE 128
+//序列化与反序列化工具
 class ByteBuffer {
 public:
   ByteBuffer(char *buf, size_t size) {
@@ -32,7 +33,7 @@ public:
       Serial.println("ReadInt buf size err");
       return 0;
     }
-    int ret = *((int *)(_buf+_pos));
+    int ret = *((int *)(_buf + _pos));
     _pos += 4;
     return ret;
   }
@@ -69,15 +70,15 @@ public:
     Write(s.c_str(), len);
   }
 
-  void Write(const char* buf,int size) {
-    if(_size + size > MAX_BUFFER_SIZE) {
+  void Write(const char *buf, int size) {
+    if (_size + size > MAX_BUFFER_SIZE) {
       return;
     }
-    memcpy(_buf+_size, buf, size);
+    memcpy(_buf + _size, buf, size);
     _size += size;
   }
 
-  void Clear(){
+  void Clear() {
     _pos = 0;
     _size = 0;
   }

@@ -2,6 +2,7 @@
 #define ROM_DATA_H
 
 #include <EEPROM.h>
+//存储字符串到rom指定位置
 void RomSaveString(int pos, String str) {
   int len = str.length();
   EEPROM.write(pos, len);
@@ -11,6 +12,7 @@ void RomSaveString(int pos, String str) {
   EEPROM.commit();
 }
 
+//从rom指定位置读取字符串
 String RomReadString(int pos) {
   String str = "";
   int len = EEPROM.read(pos);
@@ -23,13 +25,13 @@ String RomReadString(int pos) {
   return str;
 }
 
+//清除rom存储信息
 void ResetData() {
   for (int i = 0; i < 512; i++) {
     EEPROM.write(i, 0);
   }
   EEPROM.commit();
   EEPROM.end();
-  ESP.restart();
 }
 
 #endif

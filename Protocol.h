@@ -22,7 +22,6 @@ protected:
 class RegisterReq : public BaseReq {
 public:
   RegisterReq(int itemType, String name) {
-    int len = 4 + 4 + name.length();  //itemtype长度4+name长度（4+字符串长度）
     _b.WriteInt(itemType);
     _b.WriteString(name);
   }
@@ -30,7 +29,6 @@ public:
   int GetMsgId() {
     return MsgId_RegisterReq;
   }
-private:
 };
 
 class RegisterAck {
@@ -41,6 +39,40 @@ public:
   }
 
   int Ret;
+private:
+  ByteBuffer _b;
+};
+
+class ReportStatusReq : public BaseReq {
+public:
+  ReportStatusReq(int status) {
+    _b.WriteInt(status);
+  }
+
+  int GetMsgId() {
+    return MsgId_ReportStatusReq;
+  }
+};
+
+class ReportStatusAck {
+public:
+  ReportStatusAck(char* buf, size_t size)
+    : _b(buf, size) {
+    Ret = _b.ReadInt();
+  }
+
+  int Ret;
+private:
+  ByteBuffer _b;
+};
+
+class ChangeStatusPush {
+public:
+  ChangeStatusPush(char* buf, size_t size)
+    : _b(buf, size) {
+    Status = _b.ReadInt();
+  }
+  int Status;
 private:
   ByteBuffer _b;
 };
