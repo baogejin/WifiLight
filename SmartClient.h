@@ -5,14 +5,15 @@
 #include "MsgPack.h"
 #include "Protocol.h"
 #define MAX_CLIENT_BUFFER_SIZE 256
-#define LIGHT_PIN_ID D4  //控制灯的引脚id
+
 
 class SmartClient {
 public:
-  SmartClient() {
+  SmartClient(int pinId) {
     _size = 0;
     _seq = 0;
     _status = 0;
+    _pinId = pinId;
   }
 
   void Tick();
@@ -33,6 +34,7 @@ private:
   MsgPack _m;
   String _name;
   int _status;
+  int _pinId;
 };
 
 #endif

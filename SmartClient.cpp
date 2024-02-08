@@ -88,13 +88,13 @@ void SmartClient::SendMsg(BaseReq& msg) {
 
 void SmartClient::SwitchStatus() {
   _status = _status ? 0 : 1;
-  digitalWrite(LIGHT_PIN_ID, _status ? HIGH : LOW);
+  digitalWrite(_pinId, _status ? HIGH : LOW);
   reportStatus();
 }
 
 void SmartClient::changeStatus(int status) {
   _status = status ? 1 : 0;
-  digitalWrite(LIGHT_PIN_ID, _status ? HIGH : LOW);
+  digitalWrite(_pinId, _status ? HIGH : LOW);
   reportStatus();
 }
 

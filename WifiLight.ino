@@ -15,6 +15,7 @@ wifi配置，需要连接开发板的ap，进入192.168.4.1网页进行设置，
 #define NAME_POS 150         //rom存储设备名称位置
 #define RESET_DATA_PIN_ID D3  //重置按钮引脚id 5
 #define SWITCH_PIN_ID D0      //设备的灯开关引脚id 3
+#define LIGHT_PIN_ID D4  //控制灯的引脚id 4
 #endif
 
 const char *ssid = APSSID;
@@ -25,7 +26,7 @@ String name;         //设备名称
 bool switchPressed = false;
 
 ESP8266WebServer server(80);  //web服务器，用于配置wifi
-SmartClient client;           //客户端，用于对接智能家居服务器
+SmartClient client(LIGHT_PIN_ID);           //客户端，用于对接智能家居服务器
 
 void setup() {
   Serial.begin(115200);  //初始化串口
