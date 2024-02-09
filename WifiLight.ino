@@ -8,14 +8,16 @@
 /*
 wifi配置，需要连接开发板的ap，进入192.168.4.1网页进行设置，联网成功后，开发板的ap就将关闭
 */
-#define APSSID "WifiLight"   //ap的名称
-#define APPSK "88888888"     //ap的密码
-#define SSID_POS 10          //rom存储wifi名称的位置
-#define PASSWORD_POS 100     //rom存储wifi密码的位置
-#define NAME_POS 150         //rom存储设备名称位置
+#define APSSID "WifiLight"    //ap的名称
+#define APPSK "88888888"      //ap的密码
+#define SSID_POS 0            //rom存储wifi名称的位置
+#define PASSWORD_POS 50       //rom存储wifi密码的位置
+#define NAME_POS 100          //rom存储设备名称位置
+#define SERVER_HOST_POS 150   //rom存储服务器地址位置
+#define SERVER_PORT_POS 200   //rom存储服务器端口位置
 #define RESET_DATA_PIN_ID D3  //重置按钮引脚id 5
 #define SWITCH_PIN_ID D0      //设备的灯开关引脚id 3
-#define LIGHT_PIN_ID D4  //控制灯的引脚id 4
+#define LIGHT_PIN_ID D4       //控制灯的引脚id 4
 #endif
 
 const char *ssid = APSSID;
@@ -25,8 +27,8 @@ bool webOn = false;  //web页面是否开启
 String name;         //设备名称
 bool switchPressed = false;
 
-ESP8266WebServer server(80);  //web服务器，用于配置wifi
-SmartClient client(LIGHT_PIN_ID);           //客户端，用于对接智能家居服务器
+ESP8266WebServer server(80);       //web服务器，用于配置wifi
+SmartClient client(LIGHT_PIN_ID);  //客户端，用于对接智能家居服务器
 
 void setup() {
   Serial.begin(115200);  //初始化串口
@@ -48,12 +50,18 @@ void setup() {
   String savedSsid = RomReadString(SSID_POS);
   String savedPassword = RomReadString(PASSWORD_POS);
   name = RomReadString(NAME_POS);
+  String serverHost = RomReadString(SERVER_HOST_POS);
+  String serverPort = RomReadString(SERVER_PORT_POS);
+  Serial.println("读取到设备名称:" + name);
+  Serial.println("读取到wifi名称:" + savedSsid);
+  Serial.println("读取到wifi密码:" + savedPassword);
+  Serial.println("读取到服务器地址:" + serverHost);
+  Serial.println("读取到服务器端口:" + serverPort);
+  client.SetName(name);
+  client.SetServer(serverHost, serverPort.toInt());
   if (savedSsid.length() > 0 && savedPassword.length() > 0) {
     //如果有存储的信息，就尝试连接wifi
     wifiConnect(savedSsid, savedPassword);
-  }
-  if (name.length() > 0) {
-    Serial.println("读取到设备名称:" + name);
   }
 }
 
@@ -149,8 +157,10 @@ void handleRoot() {
   s += "        var wifiName = selectObj[nameIdx].value;";
   s += "        var password = wifiPassword.value;";
   s += "        var nameValue = nameinput.value;";
+  s += "        var hostValue = serverHost.value;";
+  s += "        var portValue = serverPort.value;";
   s += "        var xmlhttp=new XMLHttpRequest();";
-  s += "        xmlhttp.open(\"POST\",\"/HandleConnectWifi?ssid=\"+wifiName+\"&password=\"+password+\"&name=\"+nameValue,true);";
+  s += "        xmlhttp.open(\"POST\",\"/HandleConnectWifi?ssid=\"+wifiName+\"&password=\"+password+\"&name=\"+nameValue+\"&serverHost=\"+hostValue+\"&serverPort=\"+portValue,true);";
   s += "        xmlhttp.send();";
   s += "        xmlhttp.onload = function(e){alert(this.responseText);}";
   s += "      }";
@@ -162,6 +172,10 @@ void handleRoot() {
   s += "      wifi名称:" + getWifiList();
   s += "      <br>";
   s += "      wifi密码:<input id=\"wifiPassword\">";
+  s += "      <br>";
+  s += "      服务器地址:<input id=\"serverHost\">";
+  s += "      <br>";
+  s += "      服务器端口:<input id=\"serverPort\">";
   s += "      <br>";
   s += "      <button onclick=\"connectWifi()\">连接</button>";
   s += "    </form>";
@@ -186,9 +200,21 @@ void handleConnect() {
   String wifiName = server.arg("ssid");
   String wifiPassword = server.arg("password");
   name = server.arg("name");
+  String serverHost = server.arg("serverHost");
+  String serverPort = server.arg("serverPort");
   Serial.println("接收到wifi设置信息:" + wifiName + "," + wifiPassword);
-  Serial.println("设备名称设置:" + name);
+  Serial.println("接收到设备名称设置:" + name);
+  Serial.println("接收到服务器地址:" + serverHost + ":" + serverPort);
   server.send(200, "text/html", "连接中..");
+  client.SetName(name);
+  client.SetServer(serverHost, serverPort.toInt());
+  //存储信息到rom
+  RomSaveString(SSID_POS, wifiName);
+  RomSaveString(PASSWORD_POS, wifiPassword);
+  RomSaveString(NAME_POS, name);
+  RomSaveString(SERVER_HOST_POS, serverHost);
+  RomSaveString(SERVER_PORT_POS, serverPort);
+  //尝试wifi连接
   wifiConnect(wifiName, wifiPassword);
 }
 
@@ -199,14 +225,9 @@ void wifiConnect(String ssid, String password) {
   WiFi.waitForConnectResult(20000);
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("wifi连接成功");
-    //存储wifi信息到rom
-    RomSaveString(SSID_POS, WiFi.SSID());
-    RomSaveString(PASSWORD_POS, WiFi.psk());
-    RomSaveString(NAME_POS, name);
     //关闭配置wifi的ap和web
     closeWeb();
     closeAP();
-    client.SetName(name);
   } else {
     Serial.println("wifi连接超时");
   }

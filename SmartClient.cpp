@@ -1,7 +1,4 @@
 #include "SmartClient.h"
-
-const char* SERVER_IP = "192.168.31.136";  //服务器ip
-const int SERVER_PORT = 6502;              //服务器端口
 const int MAX_SEQ = 99999;
 void SmartClient::Tick() {
   //消息读取
@@ -26,16 +23,24 @@ void SmartClient::Tick() {
     }
   }
   //连接检查
-  if (!_c.connected()) {
-    if (_c.connect(SERVER_IP, SERVER_PORT)) {
-      //连接上后清空本地缓存，进行注册
-      Serial.println("已连接上服务器");
-      _size = 0;
-      _seq = 0;
-      //向服务器注册本设备
-      RegisterReq req(1, _name);
-      SendMsg(req);
-      Serial.println("注册消息已发送");
+  if (!_c.connected() && _host != "" && _port > 0 && _port <= 65535) {
+    unsigned long currentTime = millis();
+    if (_lastConnectTime == 0 || currentTime - _lastConnectTime >= TRY_CONNECT_SERVER_TIME) {
+      //每分钟会尝试连接服务器
+      _lastConnectTime = currentTime;
+      Serial.printf("尝试连接服务器 %s:%d\n", _host.c_str(), _port);
+      if (_c.connect(_host, _port)) {
+        //连接上后清空本地缓存，进行注册
+        Serial.println("已连接上服务器");
+        _size = 0;
+        _seq = 0;
+        //向服务器注册本设备
+        RegisterReq req(1, _name);
+        SendMsg(req);
+        Serial.println("注册消息已发送");
+      } else {
+        Serial.println("连接服务器失败");
+      }
     }
   }
 }
